@@ -499,7 +499,6 @@ struct sde_crtc_state {
     /* Mi crtc state */
 	struct sde_crtc_mi_state mi_state;
 	uint32_t num_dim_layers_bank;
-	
 	int secure_session;
 #ifdef CONFIG_DRM_SDE_EXPO
 	struct sde_hw_dim_layer *exposure_dim_layer;
