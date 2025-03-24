@@ -29,8 +29,8 @@
 #include <misc/lyb_taskmmu.h>
 #include "internal.h"
 
-#define SEQ_PUT_DEC(str, val) \
-		seq_put_decimal_ull_width(m, str, (val) << (PAGE_SHIFT-10), 8)
+#define SEQ_PUT_DEC(str, val)                                                  \
+	seq_put_decimal_ull_width(m, str, (val) << (PAGE_SHIFT - 10), 8)
 void task_mem(struct seq_file *m, struct mm_struct *mm)
 {
 	unsigned long text, lib, swap, anon, file, shmem;
@@ -71,12 +71,10 @@ void task_mem(struct seq_file *m, struct mm_struct *mm)
 	SEQ_PUT_DEC(" kB\nRssShmem:\t", shmem);
 	SEQ_PUT_DEC(" kB\nVmData:\t", mm->data_vm);
 	SEQ_PUT_DEC(" kB\nVmStk:\t", mm->stack_vm);
-	seq_put_decimal_ull_width(m,
-		    " kB\nVmExe:\t", text >> 10, 8);
-	seq_put_decimal_ull_width(m,
-		    " kB\nVmLib:\t", lib >> 10, 8);
-	seq_put_decimal_ull_width(m,
-		    " kB\nVmPTE:\t", mm_pgtables_bytes(mm) >> 10, 8);
+	seq_put_decimal_ull_width(m, " kB\nVmExe:\t", text >> 10, 8);
+	seq_put_decimal_ull_width(m, " kB\nVmLib:\t", lib >> 10, 8);
+	seq_put_decimal_ull_width(m, " kB\nVmPTE:\t",
+				  mm_pgtables_bytes(mm) >> 10, 8);
 	SEQ_PUT_DEC(" kB\nVmSwap:\t", swap);
 	seq_puts(m, " kB\n");
 	hugetlb_report_usage(m, mm);
@@ -88,14 +86,14 @@ unsigned long task_vsize(struct mm_struct *mm)
 	return PAGE_SIZE * mm->total_vm;
 }
 
-unsigned long task_statm(struct mm_struct *mm,
-			 unsigned long *shared, unsigned long *text,
-			 unsigned long *data, unsigned long *resident)
+unsigned long task_statm(struct mm_struct *mm, unsigned long *shared,
+			 unsigned long *text, unsigned long *data,
+			 unsigned long *resident)
 {
 	*shared = get_mm_counter(mm, MM_FILEPAGES) +
-			get_mm_counter(mm, MM_SHMEMPAGES);
-	*text = (PAGE_ALIGN(mm->end_code) - (mm->start_code & PAGE_MASK))
-								>> PAGE_SHIFT;
+		  get_mm_counter(mm, MM_SHMEMPAGES);
+	*text = (PAGE_ALIGN(mm->end_code) - (mm->start_code & PAGE_MASK)) >>
+		PAGE_SHIFT;
 	*data = mm->data_vm + mm->stack_vm;
 	*resident = *shared + get_mm_counter(mm, MM_ANONPAGES);
 	return mm->total_vm;
@@ -151,8 +149,8 @@ static void seq_print_vma_name(struct seq_file *m, struct vm_area_struct *vma)
 		long pages_pinned;
 		struct page *page;
 
-		pages_pinned = get_user_pages_remote(current, mm,
-				page_start_vaddr, 1, 0, &page, NULL, NULL);
+		pages_pinned = get_user_pages_remote(
+			current, mm, page_start_vaddr, 1, 0, &page, NULL, NULL);
 		if (pages_pinned < 1) {
 			seq_write(m, "<fault>]\n", 9);
 			return;
@@ -186,8 +184,8 @@ static void vma_stop(struct proc_maps_private *priv)
 	mmput(mm);
 }
 
-static struct vm_area_struct *
-m_next_vma(struct proc_maps_private *priv, struct vm_area_struct *vma)
+static struct vm_area_struct *m_next_vma(struct proc_maps_private *priv,
+					 struct vm_area_struct *vma)
 {
 	if (vma == priv->tail_vma)
 		return NULL;
@@ -196,7 +194,7 @@ m_next_vma(struct proc_maps_private *priv, struct vm_area_struct *vma)
 
 static void m_cache_vma(struct seq_file *m, struct vm_area_struct *vma)
 {
-	if (m->count < m->size)	/* vma is copied successfully */
+	if (m->count < m->size) /* vma is copied successfully */
 		m->version = m_next_vma(m->private, vma) ? vma->vm_end : -1UL;
 }
 
@@ -278,7 +276,7 @@ static void m_stop(struct seq_file *m, void *v)
 }
 
 static int proc_maps_open(struct inode *inode, struct file *file,
-			const struct seq_operations *ops, int psize)
+			  const struct seq_operations *ops, int psize)
 {
 	struct proc_maps_private *priv = __seq_open_private(file, ops, psize);
 
@@ -312,7 +310,7 @@ static int do_maps_open(struct inode *inode, struct file *file,
 			const struct seq_operations *ops)
 {
 	return proc_maps_open(inode, file, ops,
-				sizeof(struct proc_maps_private));
+			      sizeof(struct proc_maps_private));
 }
 
 /*
@@ -327,239 +325,239 @@ static int is_stack(struct vm_area_struct *vma)
 	 * languages like Go.
 	 */
 	return vma->vm_start <= vma->vm_mm->start_stack &&
-		vma->vm_end >= vma->vm_mm->start_stack;
+	       vma->vm_end >= vma->vm_mm->start_stack;
 }
 
-#define print_vma_hex10(out, val, clz_fn) \
-({									\
-	const typeof(val) __val = val;					\
-	char *const __out = out;					\
-	size_t __len;							\
-									\
-	if (__val) {							\
-		__len = (sizeof(__val) * 8 - clz_fn(__val) + 3) / 4;	\
-		switch (__len) {					\
-		case 10:						\
-			__out[9] = hex_asc[(__val >>  0) & 0xf];	\
-			__out[8] = hex_asc[(__val >>  4) & 0xf];	\
-			__out[7] = hex_asc[(__val >>  8) & 0xf];	\
-			__out[6] = hex_asc[(__val >> 12) & 0xf];	\
-			__out[5] = hex_asc[(__val >> 16) & 0xf];	\
-			__out[4] = hex_asc[(__val >> 20) & 0xf];	\
-			__out[3] = hex_asc[(__val >> 24) & 0xf];	\
-			__out[2] = hex_asc[(__val >> 28) & 0xf];	\
-			__out[1] = hex_asc[(__val >> 32) & 0xf];	\
-			__out[0] = hex_asc[(__val >> 36) & 0xf];	\
-			break;						\
-		case 9:							\
-			__out[8] = hex_asc[(__val >>  0) & 0xf];	\
-			__out[7] = hex_asc[(__val >>  4) & 0xf];	\
-			__out[6] = hex_asc[(__val >>  8) & 0xf];	\
-			__out[5] = hex_asc[(__val >> 12) & 0xf];	\
-			__out[4] = hex_asc[(__val >> 16) & 0xf];	\
-			__out[3] = hex_asc[(__val >> 20) & 0xf];	\
-			__out[2] = hex_asc[(__val >> 24) & 0xf];	\
-			__out[1] = hex_asc[(__val >> 28) & 0xf];	\
-			__out[0] = hex_asc[(__val >> 32) & 0xf];	\
-			break;						\
-		default:						\
-			__out[7] = hex_asc[(__val >>  0) & 0xf];	\
-			__out[6] = hex_asc[(__val >>  4) & 0xf];	\
-			__out[5] = hex_asc[(__val >>  8) & 0xf];	\
-			__out[4] = hex_asc[(__val >> 12) & 0xf];	\
-			__out[3] = hex_asc[(__val >> 16) & 0xf];	\
-			__out[2] = hex_asc[(__val >> 20) & 0xf];	\
-			__out[1] = hex_asc[(__val >> 24) & 0xf];	\
-			__out[0] = hex_asc[(__val >> 28) & 0xf];	\
-			__len = 8;					\
-			break;						\
-		}							\
-	} else {							\
-		*(u64 *)__out = U64_C(0x3030303030303030);		\
-		__len = 8;						\
-	}								\
-									\
-	__len;								\
-})
+#define print_vma_hex10(out, val, clz_fn)                                      \
+	({                                                                     \
+		const typeof(val) __val = val;                                 \
+		char *const __out = out;                                       \
+		size_t __len;                                                  \
+                                                                               \
+		if (__val) {                                                   \
+			__len = (sizeof(__val) * 8 - clz_fn(__val) + 3) / 4;   \
+			switch (__len) {                                       \
+			case 10:                                               \
+				__out[9] = hex_asc[(__val >> 0) & 0xf];        \
+				__out[8] = hex_asc[(__val >> 4) & 0xf];        \
+				__out[7] = hex_asc[(__val >> 8) & 0xf];        \
+				__out[6] = hex_asc[(__val >> 12) & 0xf];       \
+				__out[5] = hex_asc[(__val >> 16) & 0xf];       \
+				__out[4] = hex_asc[(__val >> 20) & 0xf];       \
+				__out[3] = hex_asc[(__val >> 24) & 0xf];       \
+				__out[2] = hex_asc[(__val >> 28) & 0xf];       \
+				__out[1] = hex_asc[(__val >> 32) & 0xf];       \
+				__out[0] = hex_asc[(__val >> 36) & 0xf];       \
+				break;                                         \
+			case 9:                                                \
+				__out[8] = hex_asc[(__val >> 0) & 0xf];        \
+				__out[7] = hex_asc[(__val >> 4) & 0xf];        \
+				__out[6] = hex_asc[(__val >> 8) & 0xf];        \
+				__out[5] = hex_asc[(__val >> 12) & 0xf];       \
+				__out[4] = hex_asc[(__val >> 16) & 0xf];       \
+				__out[3] = hex_asc[(__val >> 20) & 0xf];       \
+				__out[2] = hex_asc[(__val >> 24) & 0xf];       \
+				__out[1] = hex_asc[(__val >> 28) & 0xf];       \
+				__out[0] = hex_asc[(__val >> 32) & 0xf];       \
+				break;                                         \
+			default:                                               \
+				__out[7] = hex_asc[(__val >> 0) & 0xf];        \
+				__out[6] = hex_asc[(__val >> 4) & 0xf];        \
+				__out[5] = hex_asc[(__val >> 8) & 0xf];        \
+				__out[4] = hex_asc[(__val >> 12) & 0xf];       \
+				__out[3] = hex_asc[(__val >> 16) & 0xf];       \
+				__out[2] = hex_asc[(__val >> 20) & 0xf];       \
+				__out[1] = hex_asc[(__val >> 24) & 0xf];       \
+				__out[0] = hex_asc[(__val >> 28) & 0xf];       \
+				__len = 8;                                     \
+				break;                                         \
+			}                                                      \
+		} else {                                                       \
+			*(u64 *)__out = U64_C(0x3030303030303030);             \
+			__len = 8;                                             \
+		}                                                              \
+                                                                               \
+		__len;                                                         \
+	})
 
-#define print_vma_hex5(out, val, clz_fn) \
-({									\
-	const typeof(val) __val = val;					\
-	char *const __out = out;					\
-	size_t __len;							\
-									\
-	if (__val) {							\
-		__len = (sizeof(__val) * 8 - clz_fn(__val) + 3) / 4;	\
-		switch (__len) {					\
-		case 5:							\
-			__out[4] = hex_asc[(__val >>  0) & 0xf];	\
-			__out[3] = hex_asc[(__val >>  4) & 0xf];	\
-			__out[2] = hex_asc[(__val >>  8) & 0xf];	\
-			__out[1] = hex_asc[(__val >> 12) & 0xf];	\
-			__out[0] = hex_asc[(__val >> 16) & 0xf];	\
-			break;						\
-		case 4:							\
-			__out[3] = hex_asc[(__val >>  0) & 0xf];	\
-			__out[2] = hex_asc[(__val >>  4) & 0xf];	\
-			__out[1] = hex_asc[(__val >>  8) & 0xf];	\
-			__out[0] = hex_asc[(__val >> 12) & 0xf];	\
-			break;						\
-		case 3:							\
-			__out[2] = hex_asc[(__val >>  0) & 0xf];	\
-			__out[1] = hex_asc[(__val >>  4) & 0xf];	\
-			__out[0] = hex_asc[(__val >>  8) & 0xf];	\
-			break;						\
-		default:						\
-			__out[1] = hex_asc[(__val >>  0) & 0xf];	\
-			__out[0] = hex_asc[(__val >>  4) & 0xf];	\
-			__len = 2;					\
-			break;						\
-		}							\
-	} else {							\
-		*(u16 *)__out = U16_C(0x3030);				\
-		__len = 2;						\
-	}								\
-									\
-	__len;								\
-})
+#define print_vma_hex5(out, val, clz_fn)                                       \
+	({                                                                     \
+		const typeof(val) __val = val;                                 \
+		char *const __out = out;                                       \
+		size_t __len;                                                  \
+                                                                               \
+		if (__val) {                                                   \
+			__len = (sizeof(__val) * 8 - clz_fn(__val) + 3) / 4;   \
+			switch (__len) {                                       \
+			case 5:                                                \
+				__out[4] = hex_asc[(__val >> 0) & 0xf];        \
+				__out[3] = hex_asc[(__val >> 4) & 0xf];        \
+				__out[2] = hex_asc[(__val >> 8) & 0xf];        \
+				__out[1] = hex_asc[(__val >> 12) & 0xf];       \
+				__out[0] = hex_asc[(__val >> 16) & 0xf];       \
+				break;                                         \
+			case 4:                                                \
+				__out[3] = hex_asc[(__val >> 0) & 0xf];        \
+				__out[2] = hex_asc[(__val >> 4) & 0xf];        \
+				__out[1] = hex_asc[(__val >> 8) & 0xf];        \
+				__out[0] = hex_asc[(__val >> 12) & 0xf];       \
+				break;                                         \
+			case 3:                                                \
+				__out[2] = hex_asc[(__val >> 0) & 0xf];        \
+				__out[1] = hex_asc[(__val >> 4) & 0xf];        \
+				__out[0] = hex_asc[(__val >> 8) & 0xf];        \
+				break;                                         \
+			default:                                               \
+				__out[1] = hex_asc[(__val >> 0) & 0xf];        \
+				__out[0] = hex_asc[(__val >> 4) & 0xf];        \
+				__len = 2;                                     \
+				break;                                         \
+			}                                                      \
+		} else {                                                       \
+			*(u16 *)__out = U16_C(0x3030);                         \
+			__len = 2;                                             \
+		}                                                              \
+                                                                               \
+		__len;                                                         \
+	})
 
-#define print_vma_hex3(out, val, clz_fn) \
-({									\
-	const typeof(val) __val = val;					\
-	char *const __out = out;					\
-	size_t __len;							\
-									\
-	if (__val & 0xf00) {						\
-		__out[2] = hex_asc[(__val >> 0) & 0xf];			\
-		__out[1] = hex_asc[(__val >> 4) & 0xf];			\
-		__out[0] = hex_asc[(__val >> 8) & 0xf];			\
-		__len = 3;						\
-	} else {							\
-		__out[1] = hex_asc[(__val >> 0) & 0xf];			\
-		__out[0] = hex_asc[(__val >> 4) & 0xf];			\
-		__len = 2;						\
-	}								\
-									\
-	__len;								\
-})
+#define print_vma_hex3(out, val, clz_fn)                                       \
+	({                                                                     \
+		const typeof(val) __val = val;                                 \
+		char *const __out = out;                                       \
+		size_t __len;                                                  \
+                                                                               \
+		if (__val & 0xf00) {                                           \
+			__out[2] = hex_asc[(__val >> 0) & 0xf];                \
+			__out[1] = hex_asc[(__val >> 4) & 0xf];                \
+			__out[0] = hex_asc[(__val >> 8) & 0xf];                \
+			__len = 3;                                             \
+		} else {                                                       \
+			__out[1] = hex_asc[(__val >> 0) & 0xf];                \
+			__out[0] = hex_asc[(__val >> 4) & 0xf];                \
+			__len = 2;                                             \
+		}                                                              \
+                                                                               \
+		__len;                                                         \
+	})
 
-#define print_vma_hex10_shrink(out, val, clz_fn) \
-({									\
-	const typeof(val) __val = val;					\
-	char *const __out = out;					\
-	size_t __len;							\
-									\
-	if (__val) {							\
-		__len = (sizeof(__val) * 8 - clz_fn(__val) + 3) / 4;	\
-		switch (__len) {					\
-		case 10:						\
-			__out[9] = hex_asc[(__val >>  0) & 0xf];	\
-			__out[8] = hex_asc[(__val >>  4) & 0xf];	\
-			__out[7] = hex_asc[(__val >>  8) & 0xf];	\
-			__out[6] = hex_asc[(__val >> 12) & 0xf];	\
-			__out[5] = hex_asc[(__val >> 16) & 0xf];	\
-			__out[4] = hex_asc[(__val >> 20) & 0xf];	\
-			__out[3] = hex_asc[(__val >> 24) & 0xf];	\
-			__out[2] = hex_asc[(__val >> 28) & 0xf];	\
-			__out[1] = hex_asc[(__val >> 32) & 0xf];	\
-			__out[0] = hex_asc[(__val >> 36) & 0xf];	\
-			break;						\
-		case 9:							\
-			__out[8] = hex_asc[(__val >>  0) & 0xf];	\
-			__out[7] = hex_asc[(__val >>  4) & 0xf];	\
-			__out[6] = hex_asc[(__val >>  8) & 0xf];	\
-			__out[5] = hex_asc[(__val >> 12) & 0xf];	\
-			__out[4] = hex_asc[(__val >> 16) & 0xf];	\
-			__out[3] = hex_asc[(__val >> 20) & 0xf];	\
-			__out[2] = hex_asc[(__val >> 24) & 0xf];	\
-			__out[1] = hex_asc[(__val >> 28) & 0xf];	\
-			__out[0] = hex_asc[(__val >> 32) & 0xf];	\
-			break;						\
-		case 8:							\
-			__out[7] = hex_asc[(__val >>  0) & 0xf];	\
-			__out[6] = hex_asc[(__val >>  4) & 0xf];	\
-			__out[5] = hex_asc[(__val >>  8) & 0xf];	\
-			__out[4] = hex_asc[(__val >> 12) & 0xf];	\
-			__out[3] = hex_asc[(__val >> 16) & 0xf];	\
-			__out[2] = hex_asc[(__val >> 20) & 0xf];	\
-			__out[1] = hex_asc[(__val >> 24) & 0xf];	\
-			__out[0] = hex_asc[(__val >> 28) & 0xf];	\
-			break;						\
-		case 7:							\
-			__out[6] = hex_asc[(__val >>  0) & 0xf];	\
-			__out[5] = hex_asc[(__val >>  4) & 0xf];	\
-			__out[4] = hex_asc[(__val >>  8) & 0xf];	\
-			__out[3] = hex_asc[(__val >> 12) & 0xf];	\
-			__out[2] = hex_asc[(__val >> 16) & 0xf];	\
-			__out[1] = hex_asc[(__val >> 20) & 0xf];	\
-			__out[0] = hex_asc[(__val >> 24) & 0xf];	\
-			break;						\
-		case 6:							\
-			__out[5] = hex_asc[(__val >>  0) & 0xf];	\
-			__out[4] = hex_asc[(__val >>  4) & 0xf];	\
-			__out[3] = hex_asc[(__val >>  8) & 0xf];	\
-			__out[2] = hex_asc[(__val >> 12) & 0xf];	\
-			__out[1] = hex_asc[(__val >> 16) & 0xf];	\
-			__out[0] = hex_asc[(__val >> 20) & 0xf];	\
-			break;						\
-		case 5:							\
-			__out[4] = hex_asc[(__val >>  0) & 0xf];	\
-			__out[3] = hex_asc[(__val >>  4) & 0xf];	\
-			__out[2] = hex_asc[(__val >>  8) & 0xf];	\
-			__out[1] = hex_asc[(__val >> 12) & 0xf];	\
-			__out[0] = hex_asc[(__val >> 16) & 0xf];	\
-			break;						\
-		case 4:							\
-			__out[3] = hex_asc[(__val >>  0) & 0xf];	\
-			__out[2] = hex_asc[(__val >>  4) & 0xf];	\
-			__out[1] = hex_asc[(__val >>  8) & 0xf];	\
-			__out[0] = hex_asc[(__val >> 12) & 0xf];	\
-			break;						\
-		case 3:							\
-			__out[2] = hex_asc[(__val >>  0) & 0xf];	\
-			__out[1] = hex_asc[(__val >>  4) & 0xf];	\
-			__out[0] = hex_asc[(__val >>  8) & 0xf];	\
-			break;						\
-		case 2:							\
-			__out[1] = hex_asc[(__val >>  0) & 0xf];	\
-			__out[0] = hex_asc[(__val >>  4) & 0xf];	\
-			break;						\
-		case 1:							\
-			__out[0] = hex_asc[(__val >>  0) & 0xf];	\
-			break;						\
-		}							\
-	} else {							\
-		__len = 1;						\
-		__out[0] = '0';						\
-	}								\
-									\
-	__len;								\
-})
+#define print_vma_hex10_shrink(out, val, clz_fn)                               \
+	({                                                                     \
+		const typeof(val) __val = val;                                 \
+		char *const __out = out;                                       \
+		size_t __len;                                                  \
+                                                                               \
+		if (__val) {                                                   \
+			__len = (sizeof(__val) * 8 - clz_fn(__val) + 3) / 4;   \
+			switch (__len) {                                       \
+			case 10:                                               \
+				__out[9] = hex_asc[(__val >> 0) & 0xf];        \
+				__out[8] = hex_asc[(__val >> 4) & 0xf];        \
+				__out[7] = hex_asc[(__val >> 8) & 0xf];        \
+				__out[6] = hex_asc[(__val >> 12) & 0xf];       \
+				__out[5] = hex_asc[(__val >> 16) & 0xf];       \
+				__out[4] = hex_asc[(__val >> 20) & 0xf];       \
+				__out[3] = hex_asc[(__val >> 24) & 0xf];       \
+				__out[2] = hex_asc[(__val >> 28) & 0xf];       \
+				__out[1] = hex_asc[(__val >> 32) & 0xf];       \
+				__out[0] = hex_asc[(__val >> 36) & 0xf];       \
+				break;                                         \
+			case 9:                                                \
+				__out[8] = hex_asc[(__val >> 0) & 0xf];        \
+				__out[7] = hex_asc[(__val >> 4) & 0xf];        \
+				__out[6] = hex_asc[(__val >> 8) & 0xf];        \
+				__out[5] = hex_asc[(__val >> 12) & 0xf];       \
+				__out[4] = hex_asc[(__val >> 16) & 0xf];       \
+				__out[3] = hex_asc[(__val >> 20) & 0xf];       \
+				__out[2] = hex_asc[(__val >> 24) & 0xf];       \
+				__out[1] = hex_asc[(__val >> 28) & 0xf];       \
+				__out[0] = hex_asc[(__val >> 32) & 0xf];       \
+				break;                                         \
+			case 8:                                                \
+				__out[7] = hex_asc[(__val >> 0) & 0xf];        \
+				__out[6] = hex_asc[(__val >> 4) & 0xf];        \
+				__out[5] = hex_asc[(__val >> 8) & 0xf];        \
+				__out[4] = hex_asc[(__val >> 12) & 0xf];       \
+				__out[3] = hex_asc[(__val >> 16) & 0xf];       \
+				__out[2] = hex_asc[(__val >> 20) & 0xf];       \
+				__out[1] = hex_asc[(__val >> 24) & 0xf];       \
+				__out[0] = hex_asc[(__val >> 28) & 0xf];       \
+				break;                                         \
+			case 7:                                                \
+				__out[6] = hex_asc[(__val >> 0) & 0xf];        \
+				__out[5] = hex_asc[(__val >> 4) & 0xf];        \
+				__out[4] = hex_asc[(__val >> 8) & 0xf];        \
+				__out[3] = hex_asc[(__val >> 12) & 0xf];       \
+				__out[2] = hex_asc[(__val >> 16) & 0xf];       \
+				__out[1] = hex_asc[(__val >> 20) & 0xf];       \
+				__out[0] = hex_asc[(__val >> 24) & 0xf];       \
+				break;                                         \
+			case 6:                                                \
+				__out[5] = hex_asc[(__val >> 0) & 0xf];        \
+				__out[4] = hex_asc[(__val >> 4) & 0xf];        \
+				__out[3] = hex_asc[(__val >> 8) & 0xf];        \
+				__out[2] = hex_asc[(__val >> 12) & 0xf];       \
+				__out[1] = hex_asc[(__val >> 16) & 0xf];       \
+				__out[0] = hex_asc[(__val >> 20) & 0xf];       \
+				break;                                         \
+			case 5:                                                \
+				__out[4] = hex_asc[(__val >> 0) & 0xf];        \
+				__out[3] = hex_asc[(__val >> 4) & 0xf];        \
+				__out[2] = hex_asc[(__val >> 8) & 0xf];        \
+				__out[1] = hex_asc[(__val >> 12) & 0xf];       \
+				__out[0] = hex_asc[(__val >> 16) & 0xf];       \
+				break;                                         \
+			case 4:                                                \
+				__out[3] = hex_asc[(__val >> 0) & 0xf];        \
+				__out[2] = hex_asc[(__val >> 4) & 0xf];        \
+				__out[1] = hex_asc[(__val >> 8) & 0xf];        \
+				__out[0] = hex_asc[(__val >> 12) & 0xf];       \
+				break;                                         \
+			case 3:                                                \
+				__out[2] = hex_asc[(__val >> 0) & 0xf];        \
+				__out[1] = hex_asc[(__val >> 4) & 0xf];        \
+				__out[0] = hex_asc[(__val >> 8) & 0xf];        \
+				break;                                         \
+			case 2:                                                \
+				__out[1] = hex_asc[(__val >> 0) & 0xf];        \
+				__out[0] = hex_asc[(__val >> 4) & 0xf];        \
+				break;                                         \
+			case 1:                                                \
+				__out[0] = hex_asc[(__val >> 0) & 0xf];        \
+				break;                                         \
+			}                                                      \
+		} else {                                                       \
+			__len = 1;                                             \
+			__out[0] = '0';                                        \
+		}                                                              \
+                                                                               \
+		__len;                                                         \
+	})
 
-#define print_vma_hex2_shrink(out, val, clz_fn) \
-({									\
-	const typeof(val) __val = val;					\
-	char *const __out = out;					\
-	size_t __len;							\
-									\
-	if (__val) {							\
-		__len = (sizeof(__val) * 8 - clz_fn(__val) + 3) / 4;	\
-		switch (__len) {					\
-		case 2:							\
-			__out[1] = hex_asc[(__val >>  0) & 0xf];	\
-			__out[0] = hex_asc[(__val >>  4) & 0xf];	\
-			break;						\
-		case 1:							\
-			__out[0] = hex_asc[(__val >>  0) & 0xf];	\
-			break;						\
-		}							\
-	} else {							\
-		__len = 1;						\
-		__out[0] = '0';						\
-	}								\
-									\
-	__len;								\
-})
+#define print_vma_hex2_shrink(out, val, clz_fn)                                \
+	({                                                                     \
+		const typeof(val) __val = val;                                 \
+		char *const __out = out;                                       \
+		size_t __len;                                                  \
+                                                                               \
+		if (__val) {                                                   \
+			__len = (sizeof(__val) * 8 - clz_fn(__val) + 3) / 4;   \
+			switch (__len) {                                       \
+			case 2:                                                \
+				__out[1] = hex_asc[(__val >> 0) & 0xf];        \
+				__out[0] = hex_asc[(__val >> 4) & 0xf];        \
+				break;                                         \
+			case 1:                                                \
+				__out[0] = hex_asc[(__val >> 0) & 0xf];        \
+				break;                                         \
+			}                                                      \
+		} else {                                                       \
+			__len = 1;                                             \
+			__out[0] = '0';                                        \
+		}                                                              \
+                                                                               \
+		__len;                                                         \
+	})
 
 static int show_vma_header_prefix(struct seq_file *m, unsigned long start,
 				  unsigned long end, vm_flags_t flags,
@@ -578,8 +576,7 @@ static int show_vma_header_prefix(struct seq_file *m, unsigned long start,
 	/* Supports printing up to 40 bits per virtual address */
 	BUILD_BUG_ON(CONFIG_ARM64_VA_BITS > 40);
 
-	if (lyb_sultan_pid_shrink)
-	{
+	if (lyb_sultan_pid_shrink) {
 		/* 
 		 * shrinks the PID map output to be as small as
 		 * possible by omitting non-significant leading zeros from
@@ -598,11 +595,12 @@ static int show_vma_header_prefix(struct seq_file *m, unsigned long start,
 		out[len++] = "ps"[!!(flags & VM_MAYSHARE)];
 		out[len++] = ' ';
 
-		len += print_vma_hex10_shrink(out + len, pgoff, __builtin_clzll);
+		len += print_vma_hex10_shrink(out + len, pgoff,
+					      __builtin_clzll);
 
 		out[len++] = ' ';
 
- 	 	len += print_vma_hex3(out + len, MAJOR(dev), __builtin_clz);
+		len += print_vma_hex3(out + len, MAJOR(dev), __builtin_clz);
 
 		out[len++] = ':';
 
@@ -648,29 +646,24 @@ static int show_vma_header_prefix(struct seq_file *m, unsigned long start,
 	return 0;
 }
 
-static void show_vma_header_prefix_fake(struct seq_file *m,
-				   unsigned long start, unsigned long end,
-				   vm_flags_t flags, unsigned long long pgoff,
-				   dev_t dev, unsigned long ino)
-{
-	seq_setwidth(m, 25 + sizeof(void *) * 6 - 1);
-	seq_printf(m, "%08lx-%08lx %c%c%c%c %08llx %02x:%02x %lu ",
-		   start,
-		   end,
-		   flags & VM_READ ? 'r' : '-',
-		   flags & VM_WRITE ? '-' : '-',
-		   flags & VM_EXEC ? '-' : '-',
-		   flags & VM_MAYSHARE ? 's' : 'p',
-		   pgoff,
-		   MAJOR(dev), MINOR(dev), ino);
-}
-
 #ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
-extern void susfs_sus_ino_for_show_map_vma(unsigned long ino, dev_t *out_dev, unsigned long *out_ino);
+extern void susfs_sus_ino_for_show_map_vma(unsigned long ino, dev_t *out_dev,
+					   unsigned long *out_ino);
 #endif
 
-static void
-show_map_vma(struct seq_file *m, struct vm_area_struct *vma)
+static void show_vma_header_prefix_fake(struct seq_file *m, unsigned long start,
+					unsigned long end, vm_flags_t flags,
+					unsigned long long pgoff, dev_t dev,
+					unsigned long ino)
+{
+	seq_setwidth(m, 25 + sizeof(void *) * 6 - 1);
+	seq_printf(m, "%08lx-%08lx %c%c%c%c %08llx %02x:%02x %lu ", start, end,
+		   flags & VM_READ ? 'r' : '-', flags & VM_WRITE ? 'w' : '-',
+		   flags & VM_EXEC ? '-' : '-', flags & VM_MAYSHARE ? 's' : 'p',
+		   pgoff, MAJOR(dev), MINOR(dev), ino);
+}
+
+static void show_map_vma(struct seq_file *m, struct vm_area_struct *vma)
 {
 	struct mm_struct *mm = vma->vm_mm;
 	struct file *file = vma->vm_file;
@@ -680,32 +673,42 @@ show_map_vma(struct seq_file *m, struct vm_area_struct *vma)
 	unsigned long start, end;
 	dev_t dev = 0;
 	const char *name = NULL;
+	struct dentry *dentry;
 
 	if (file) {
 		struct inode *inode = file_inode(vma->vm_file);
 #ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
 		if (unlikely(inode->i_state & INODE_STATE_SUS_KSTAT)) {
-			susfs_sus_ino_for_show_map_vma(inode->i_ino, &dev, &ino);
+			susfs_sus_ino_for_show_map_vma(inode->i_ino, &dev,
+						       &ino);
 			goto bypass_orig_flow;
 		}
 #endif
 		dev = inode->i_sb->s_dev;
 		ino = inode->i_ino;
 #ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
-bypass_orig_flow:
+	bypass_orig_flow:
 #endif
 		pgoff = ((loff_t)vma->vm_pgoff) << PAGE_SHIFT;
-		struct dentry *dentry = file->f_path.dentry;
-        if (dentry) {
-        	const char *path = (const char *)dentry->d_name.name; 
-            	if (strstr(path, "lineage")) { 
-	            	start = vma->vm_start;
-	             	end = vma->vm_end;
-	             	show_vma_header_prefix_fake(m, start, end, flags, pgoff, dev, ino);
-                	name = "/system/framework/framework-res.apk";
-		            goto done;
-            	}
-            }
+		dentry = file->f_path.dentry;
+		if (dentry) {
+			const char *path = (const char *)dentry->d_name.name;
+			if (strstr(path, "lineage")) {
+				start = vma->vm_start;
+				end = vma->vm_end;
+				show_vma_header_prefix(m, start, end, flags,
+						       pgoff, dev, ino);
+				name = "/system/framework/framework-res.apk";
+				goto done;
+			}
+			if (strstr(path, "jit-zygote-cache")) {
+				start = vma->vm_start;
+				end = vma->vm_end;
+				show_vma_header_prefix_fake(
+					m, start, end, flags, pgoff, dev, ino);
+				goto bypass;
+			}
+		}
 	}
 
 	start = vma->vm_start;
@@ -713,6 +716,7 @@ bypass_orig_flow:
 	if (show_vma_header_prefix(m, start, end, flags, pgoff, dev, ino))
 		return;
 
+bypass:
 	/*
 	 * Print the dentry name for named mappings, and a
 	 * special [heap] marker for the heap:
@@ -760,8 +764,7 @@ bypass_orig_flow:
 			return;
 		}
 
-		if (vma->vm_start <= mm->brk &&
-		    vma->vm_end >= mm->start_brk) {
+		if (vma->vm_start <= mm->brk && vma->vm_end >= mm->start_brk) {
 			seq_write(m, "[heap]\n", 7);
 			return;
 		}
@@ -834,32 +837,31 @@ static void *m_next_pid(struct seq_file *m, void *v, loff_t *pos)
 	return NULL;
 }
 
-static const struct seq_operations proc_pid_maps_op = {
-	.start	= m_start,
-	.next	= m_next,
-	.stop	= m_stop,
-	.show	= show_map
-};
+static const struct seq_operations proc_pid_maps_op = { .start = m_start,
+							.next = m_next,
+							.stop = m_stop,
+							.show = show_map };
 
 static const struct seq_operations proc_pid_maps_op_sultanpid = {
-	.start	= m_start_pid,
-	.next	= m_next_pid,
-	.stop	= m_stop,
-	.show	= show_map
+	.start = m_start_pid,
+	.next = m_next_pid,
+	.stop = m_stop,
+	.show = show_map
 };
 
 static int pid_maps_open(struct inode *inode, struct file *file)
 {
 	if (lyb_sultan_pid)
 		return do_maps_open(inode, file, &proc_pid_maps_op_sultanpid);
-	else return do_maps_open(inode, file, &proc_pid_maps_op);
+	else
+		return do_maps_open(inode, file, &proc_pid_maps_op);
 }
 
 const struct file_operations proc_pid_maps_operations = {
-	.open		= pid_maps_open,
-	.read		= seq_read,
-	.llseek		= seq_lseek,
-	.release	= proc_map_release,
+	.open = pid_maps_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = proc_map_release,
 };
 
 /*
@@ -903,7 +905,7 @@ struct mem_size_stats {
 };
 
 static void smaps_account(struct mem_size_stats *mss, struct page *page,
-		bool compound, bool young, bool dirty, bool locked)
+			  bool compound, bool young, bool dirty, bool locked)
 {
 	int i, nr = compound ? 1 << compound_order(page) : 1;
 	unsigned long size = nr * PAGE_SIZE;
@@ -961,21 +963,21 @@ static void smaps_account(struct mem_size_stats *mss, struct page *page,
 
 #ifdef CONFIG_SHMEM
 static int smaps_pte_hole(unsigned long addr, unsigned long end,
-		struct mm_walk *walk)
+			  struct mm_walk *walk)
 {
 	struct mem_size_stats *mss = walk->private;
 
-	mss->swap += shmem_partial_swap_usage(
-			walk->vma->vm_file->f_mapping, addr, end);
+	mss->swap += shmem_partial_swap_usage(walk->vma->vm_file->f_mapping,
+					      addr, end);
 
 	return 0;
 }
 #else
-#define smaps_pte_hole		NULL
+#define smaps_pte_hole NULL
 #endif /* CONFIG_SHMEM */
 
 static void smaps_pte_entry(pte_t *pte, unsigned long addr,
-		struct mm_walk *walk)
+			    struct mm_walk *walk)
 {
 	struct mem_size_stats *mss = walk->private;
 	struct vm_area_struct *vma = walk->vma;
@@ -1004,10 +1006,10 @@ static void smaps_pte_entry(pte_t *pte, unsigned long addr,
 			page = migration_entry_to_page(swpent);
 		else if (is_device_private_entry(swpent))
 			page = device_private_entry_to_page(swpent);
-	} else if (unlikely(IS_ENABLED(CONFIG_SHMEM) && mss->check_shmem_swap
-							&& pte_none(*pte))) {
+	} else if (unlikely(IS_ENABLED(CONFIG_SHMEM) && mss->check_shmem_swap &&
+			    pte_none(*pte))) {
 		page = find_get_entry(vma->vm_file->f_mapping,
-						linear_page_index(vma, addr));
+				      linear_page_index(vma, addr));
 		if (!page)
 			return;
 
@@ -1022,12 +1024,13 @@ static void smaps_pte_entry(pte_t *pte, unsigned long addr,
 	if (!page)
 		return;
 
-	smaps_account(mss, page, false, pte_young(*pte), pte_dirty(*pte), locked);
+	smaps_account(mss, page, false, pte_young(*pte), pte_dirty(*pte),
+		      locked);
 }
 
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 static void smaps_pmd_entry(pmd_t *pmd, unsigned long addr,
-		struct mm_walk *walk)
+			    struct mm_walk *walk)
 {
 	struct mem_size_stats *mss = walk->private;
 	struct vm_area_struct *vma = walk->vma;
@@ -1046,11 +1049,12 @@ static void smaps_pmd_entry(pmd_t *pmd, unsigned long addr,
 		/* pass */;
 	else
 		VM_BUG_ON_PAGE(1, page);
-	smaps_account(mss, page, true, pmd_young(*pmd), pmd_dirty(*pmd), locked);
+	smaps_account(mss, page, true, pmd_young(*pmd), pmd_dirty(*pmd),
+		      locked);
 }
 #else
 static void smaps_pmd_entry(pmd_t *pmd, unsigned long addr,
-		struct mm_walk *walk)
+			    struct mm_walk *walk)
 {
 }
 #endif
@@ -1095,52 +1099,52 @@ static void show_smap_vma_flags(struct seq_file *m, struct vm_area_struct *vma)
 		/*
 		 * In case if we meet a flag we don't know about.
 		 */
-		[0 ... (BITS_PER_LONG-1)] = "??",
+		[0 ...(BITS_PER_LONG - 1)] = "??",
 
-		[ilog2(VM_READ)]	= "rd",
-		[ilog2(VM_WRITE)]	= "wr",
-		[ilog2(VM_EXEC)]	= "ex",
-		[ilog2(VM_SHARED)]	= "sh",
-		[ilog2(VM_MAYREAD)]	= "mr",
-		[ilog2(VM_MAYWRITE)]	= "mw",
-		[ilog2(VM_MAYEXEC)]	= "me",
-		[ilog2(VM_MAYSHARE)]	= "ms",
-		[ilog2(VM_GROWSDOWN)]	= "gd",
-		[ilog2(VM_PFNMAP)]	= "pf",
-		[ilog2(VM_DENYWRITE)]	= "dw",
+		[ilog2(VM_READ)] = "rd",
+		[ilog2(VM_WRITE)] = "wr",
+		[ilog2(VM_EXEC)] = "ex",
+		[ilog2(VM_SHARED)] = "sh",
+		[ilog2(VM_MAYREAD)] = "mr",
+		[ilog2(VM_MAYWRITE)] = "mw",
+		[ilog2(VM_MAYEXEC)] = "me",
+		[ilog2(VM_MAYSHARE)] = "ms",
+		[ilog2(VM_GROWSDOWN)] = "gd",
+		[ilog2(VM_PFNMAP)] = "pf",
+		[ilog2(VM_DENYWRITE)] = "dw",
 #ifdef CONFIG_X86_INTEL_MPX
-		[ilog2(VM_MPX)]		= "mp",
+		[ilog2(VM_MPX)] = "mp",
 #endif
-		[ilog2(VM_LOCKED)]	= "lo",
-		[ilog2(VM_IO)]		= "io",
-		[ilog2(VM_SEQ_READ)]	= "sr",
-		[ilog2(VM_RAND_READ)]	= "rr",
-		[ilog2(VM_DONTCOPY)]	= "dc",
-		[ilog2(VM_DONTEXPAND)]	= "de",
-		[ilog2(VM_ACCOUNT)]	= "ac",
-		[ilog2(VM_NORESERVE)]	= "nr",
-		[ilog2(VM_HUGETLB)]	= "ht",
-		[ilog2(VM_SYNC)]	= "sf",
-		[ilog2(VM_ARCH_1)]	= "ar",
-		[ilog2(VM_WIPEONFORK)]	= "wf",
-		[ilog2(VM_DONTDUMP)]	= "dd",
+		[ilog2(VM_LOCKED)] = "lo",
+		[ilog2(VM_IO)] = "io",
+		[ilog2(VM_SEQ_READ)] = "sr",
+		[ilog2(VM_RAND_READ)] = "rr",
+		[ilog2(VM_DONTCOPY)] = "dc",
+		[ilog2(VM_DONTEXPAND)] = "de",
+		[ilog2(VM_ACCOUNT)] = "ac",
+		[ilog2(VM_NORESERVE)] = "nr",
+		[ilog2(VM_HUGETLB)] = "ht",
+		[ilog2(VM_SYNC)] = "sf",
+		[ilog2(VM_ARCH_1)] = "ar",
+		[ilog2(VM_WIPEONFORK)] = "wf",
+		[ilog2(VM_DONTDUMP)] = "dd",
 #ifdef CONFIG_MEM_SOFT_DIRTY
-		[ilog2(VM_SOFTDIRTY)]	= "sd",
+		[ilog2(VM_SOFTDIRTY)] = "sd",
 #endif
-		[ilog2(VM_MIXEDMAP)]	= "mm",
-		[ilog2(VM_HUGEPAGE)]	= "hg",
-		[ilog2(VM_NOHUGEPAGE)]	= "nh",
-		[ilog2(VM_MERGEABLE)]	= "mg",
-		[ilog2(VM_UFFD_MISSING)]= "um",
-		[ilog2(VM_UFFD_WP)]	= "uw",
+		[ilog2(VM_MIXEDMAP)] = "mm",
+		[ilog2(VM_HUGEPAGE)] = "hg",
+		[ilog2(VM_NOHUGEPAGE)] = "nh",
+		[ilog2(VM_MERGEABLE)] = "mg",
+		[ilog2(VM_UFFD_MISSING)] = "um",
+		[ilog2(VM_UFFD_WP)] = "uw",
 #ifdef CONFIG_ARCH_HAS_PKEYS
 		/* These come out via ProtectionKey: */
-		[ilog2(VM_PKEY_BIT0)]	= "",
-		[ilog2(VM_PKEY_BIT1)]	= "",
-		[ilog2(VM_PKEY_BIT2)]	= "",
-		[ilog2(VM_PKEY_BIT3)]	= "",
+		[ilog2(VM_PKEY_BIT0)] = "",
+		[ilog2(VM_PKEY_BIT1)] = "",
+		[ilog2(VM_PKEY_BIT2)] = "",
+		[ilog2(VM_PKEY_BIT3)] = "",
 #if VM_PKEY_BIT4
-		[ilog2(VM_PKEY_BIT4)]	= "",
+		[ilog2(VM_PKEY_BIT4)] = "",
 #endif
 #endif /* CONFIG_ARCH_HAS_PKEYS */
 	};
@@ -1161,8 +1165,8 @@ static void show_smap_vma_flags(struct seq_file *m, struct vm_area_struct *vma)
 
 #ifdef CONFIG_HUGETLB_PAGE
 static int smaps_hugetlb_range(pte_t *pte, unsigned long hmask,
-				 unsigned long addr, unsigned long end,
-				 struct mm_walk *walk)
+			       unsigned long addr, unsigned long end,
+			       struct mm_walk *walk)
 {
 	struct mem_size_stats *mss = walk->private;
 	struct vm_area_struct *vma = walk->vma;
@@ -1189,22 +1193,22 @@ static int smaps_hugetlb_range(pte_t *pte, unsigned long hmask,
 	return 0;
 }
 #else
-#define smaps_hugetlb_range	NULL
+#define smaps_hugetlb_range NULL
 #endif /* HUGETLB_PAGE */
 
 static const struct mm_walk_ops smaps_walk_ops = {
-	.pmd_entry		= smaps_pte_range,
-	.hugetlb_entry		= smaps_hugetlb_range,
+	.pmd_entry = smaps_pte_range,
+	.hugetlb_entry = smaps_hugetlb_range,
 };
 
 static const struct mm_walk_ops smaps_shmem_walk_ops = {
-	.pmd_entry		= smaps_pte_range,
-	.hugetlb_entry		= smaps_hugetlb_range,
-	.pte_hole		= smaps_pte_hole,
+	.pmd_entry = smaps_pte_range,
+	.hugetlb_entry = smaps_hugetlb_range,
+	.pte_hole = smaps_pte_hole,
 };
 
 static void smap_gather_stats(struct vm_area_struct *vma,
-			     struct mem_size_stats *mss)
+			      struct mem_size_stats *mss)
 {
 #ifdef CONFIG_SHMEM
 	/* In case of smaps_rollup, reset the value from previous vma */
@@ -1223,7 +1227,7 @@ static void smap_gather_stats(struct vm_area_struct *vma,
 		unsigned long shmem_swapped = shmem_swap_usage(vma);
 
 		if (!shmem_swapped || (vma->vm_flags & VM_SHARED) ||
-					!(vma->vm_flags & VM_WRITE)) {
+		    !(vma->vm_flags & VM_WRITE)) {
 			mss->swap += shmem_swapped;
 		} else {
 			mss->check_shmem_swap = true;
@@ -1236,8 +1240,7 @@ static void smap_gather_stats(struct vm_area_struct *vma,
 	walk_page_vma(vma, &smaps_walk_ops, mss);
 }
 
-#define SEQ_PUT_DEC(str, val) \
-		seq_put_decimal_ull_width(m, str, (val) >> 10, 8)
+#define SEQ_PUT_DEC(str, val) seq_put_decimal_ull_width(m, str, (val) >> 10, 8)
 
 /* Show the contents common for smaps and smaps_rollup */
 static void __show_smap(struct seq_file *m, const struct mem_size_stats *mss)
@@ -1254,13 +1257,11 @@ static void __show_smap(struct seq_file *m, const struct mem_size_stats *mss)
 	SEQ_PUT_DEC(" kB\nAnonHugePages:  ", mss->anonymous_thp);
 	SEQ_PUT_DEC(" kB\nShmemPmdMapped: ", mss->shmem_thp);
 	SEQ_PUT_DEC(" kB\nShared_Hugetlb: ", mss->shared_hugetlb);
-	seq_put_decimal_ull_width(m, " kB\nPrivate_Hugetlb: ",
-				  mss->private_hugetlb >> 10, 7);
+	seq_put_decimal_ull_width(
+		m, " kB\nPrivate_Hugetlb: ", mss->private_hugetlb >> 10, 7);
 	SEQ_PUT_DEC(" kB\nSwap:           ", mss->swap);
-	SEQ_PUT_DEC(" kB\nSwapPss:        ",
-					mss->swap_pss >> PSS_SHIFT);
-	SEQ_PUT_DEC(" kB\nLocked:         ",
-					mss->pss_locked >> PSS_SHIFT);
+	SEQ_PUT_DEC(" kB\nSwapPss:        ", mss->swap_pss >> PSS_SHIFT);
+	SEQ_PUT_DEC(" kB\nLocked:         ", mss->pss_locked >> PSS_SHIFT);
 	seq_puts(m, " kB\n");
 }
 
@@ -1286,7 +1287,8 @@ static int show_smap(struct seq_file *m, void *v)
 
 	__show_smap(m, &mss);
 
-	seq_printf(m, "THPeligible:    %d\n", transparent_hugepage_enabled(vma));
+	seq_printf(m, "THPeligible:    %d\n",
+		   transparent_hugepage_enabled(vma));
 
 	if (arch_pkeys_enabled())
 		seq_printf(m, "ProtectionKey:  %8u\n", vma_pkey(vma));
@@ -1329,8 +1331,8 @@ static int show_smaps_rollup(struct seq_file *m, void *v)
 		last_vma_end = vma->vm_end;
 	}
 
-	show_vma_header_prefix(m, priv->mm->mmap->vm_start,
-			       last_vma_end, 0, 0, 0, 0);
+	show_vma_header_prefix(m, priv->mm->mmap->vm_start, last_vma_end, 0, 0,
+			       0, 0);
 	seq_puts(m, "[rollup]\n");
 
 	__show_smap(m, &mss);
@@ -1348,12 +1350,10 @@ out_put_task:
 }
 #undef SEQ_PUT_DEC
 
-static const struct seq_operations proc_pid_smaps_op = {
-	.start	= m_start,
-	.next	= m_next,
-	.stop	= m_stop,
-	.show	= show_smap
-};
+static const struct seq_operations proc_pid_smaps_op = { .start = m_start,
+							 .next = m_next,
+							 .stop = m_stop,
+							 .show = show_smap };
 
 static int pid_smaps_open(struct inode *inode, struct file *file)
 {
@@ -1402,17 +1402,17 @@ static int smaps_rollup_release(struct inode *inode, struct file *file)
 }
 
 const struct file_operations proc_pid_smaps_operations = {
-	.open		= pid_smaps_open,
-	.read		= seq_read,
-	.llseek		= seq_lseek,
-	.release	= proc_map_release,
+	.open = pid_smaps_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = proc_map_release,
 };
 
 const struct file_operations proc_pid_smaps_rollup_operations = {
-	.open		= smaps_rollup_open,
-	.read		= seq_read,
-	.llseek		= seq_lseek,
-	.release	= smaps_rollup_release,
+	.open = smaps_rollup_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = smaps_rollup_release,
 };
 
 enum clear_refs_types {
@@ -1430,7 +1430,7 @@ struct clear_refs_private {
 
 #ifdef CONFIG_MEM_SOFT_DIRTY
 static inline void clear_soft_dirty(struct vm_area_struct *vma,
-		unsigned long addr, pte_t *pte)
+				    unsigned long addr, pte_t *pte)
 {
 	/*
 	 * The soft-dirty tracker uses #PF-s to catch writes
@@ -1452,14 +1452,14 @@ static inline void clear_soft_dirty(struct vm_area_struct *vma,
 }
 #else
 static inline void clear_soft_dirty(struct vm_area_struct *vma,
-		unsigned long addr, pte_t *pte)
+				    unsigned long addr, pte_t *pte)
 {
 }
 #endif
 
 #if defined(CONFIG_MEM_SOFT_DIRTY) && defined(CONFIG_TRANSPARENT_HUGEPAGE)
 static inline void clear_soft_dirty_pmd(struct vm_area_struct *vma,
-		unsigned long addr, pmd_t *pmdp)
+					unsigned long addr, pmd_t *pmdp)
 {
 	pmd_t old, pmd = *pmdp;
 
@@ -1482,7 +1482,7 @@ static inline void clear_soft_dirty_pmd(struct vm_area_struct *vma,
 }
 #else
 static inline void clear_soft_dirty_pmd(struct vm_area_struct *vma,
-		unsigned long addr, pmd_t *pmdp)
+					unsigned long addr, pmd_t *pmdp)
 {
 }
 #endif
@@ -1512,7 +1512,7 @@ static int clear_refs_pte_range(pmd_t *pmd, unsigned long addr,
 		pmdp_test_and_clear_young(vma, addr, pmd);
 		test_and_clear_page_young(page);
 		ClearPageReferenced(page);
-out:
+	out:
 		spin_unlock(ptl);
 		return 0;
 	}
@@ -1569,8 +1569,8 @@ static int clear_refs_test_walk(unsigned long start, unsigned long end,
 }
 
 static const struct mm_walk_ops clear_refs_walk_ops = {
-	.pmd_entry		= clear_refs_pte_range,
-	.test_walk		= clear_refs_test_walk,
+	.pmd_entry = clear_refs_pte_range,
+	.test_walk = clear_refs_test_walk,
 };
 
 static ssize_t clear_refs_write(struct file *file, const char __user *buf,
@@ -1656,7 +1656,8 @@ static ssize_t clear_refs_write(struct file *file, const char __user *buf,
 				for (vma = mm->mmap; vma; vma = vma->vm_next) {
 					vm_write_begin(vma);
 					WRITE_ONCE(vma->vm_flags,
-						vma->vm_flags & ~VM_SOFTDIRTY);
+						   vma->vm_flags &
+							   ~VM_SOFTDIRTY);
 					vma_set_page_prot(vma);
 					vm_write_end(vma);
 				}
@@ -1671,7 +1672,7 @@ static ssize_t clear_refs_write(struct file *file, const char __user *buf,
 			mmu_notifier_invalidate_range_end(mm, 0, -1);
 		tlb_finish_mmu(&tlb, 0, -1);
 		up_read(&mm->mmap_sem);
-out_mm:
+	out_mm:
 		mmput(mm);
 	}
 	put_task_struct(task);
@@ -1680,8 +1681,8 @@ out_mm:
 }
 
 const struct file_operations proc_clear_refs_operations = {
-	.write		= clear_refs_write,
-	.llseek		= noop_llseek,
+	.write = clear_refs_write,
+	.llseek = noop_llseek,
 };
 
 typedef struct {
@@ -1689,28 +1690,28 @@ typedef struct {
 } pagemap_entry_t;
 
 struct pagemapread {
-	int pos, len;		/* units: PM_ENTRY_BYTES, not bytes */
+	int pos, len; /* units: PM_ENTRY_BYTES, not bytes */
 	pagemap_entry_t *buffer;
 	bool show_pfn;
 };
 
-#define PAGEMAP_WALK_SIZE	(PMD_SIZE)
-#define PAGEMAP_WALK_MASK	(PMD_MASK)
+#define PAGEMAP_WALK_SIZE (PMD_SIZE)
+#define PAGEMAP_WALK_MASK (PMD_MASK)
 
-#define PM_ENTRY_BYTES		sizeof(pagemap_entry_t)
-#define PM_PFRAME_BITS		55
-#define PM_PFRAME_MASK		GENMASK_ULL(PM_PFRAME_BITS - 1, 0)
-#define PM_SOFT_DIRTY		BIT_ULL(55)
-#define PM_MMAP_EXCLUSIVE	BIT_ULL(56)
-#define PM_FILE			BIT_ULL(61)
-#define PM_SWAP			BIT_ULL(62)
-#define PM_PRESENT		BIT_ULL(63)
+#define PM_ENTRY_BYTES sizeof(pagemap_entry_t)
+#define PM_PFRAME_BITS 55
+#define PM_PFRAME_MASK GENMASK_ULL(PM_PFRAME_BITS - 1, 0)
+#define PM_SOFT_DIRTY BIT_ULL(55)
+#define PM_MMAP_EXCLUSIVE BIT_ULL(56)
+#define PM_FILE BIT_ULL(61)
+#define PM_SWAP BIT_ULL(62)
+#define PM_PRESENT BIT_ULL(63)
 
-#define PM_END_OF_BUFFER    1
+#define PM_END_OF_BUFFER 1
 
 static inline pagemap_entry_t make_pme(u64 frame, u64 flags)
 {
-	return (pagemap_entry_t) { .pme = (frame & PM_PFRAME_MASK) | flags };
+	return (pagemap_entry_t){ .pme = (frame & PM_PFRAME_MASK) | flags };
 }
 
 static int add_to_pagemap(unsigned long addr, pagemap_entry_t *pme,
@@ -1723,7 +1724,7 @@ static int add_to_pagemap(unsigned long addr, pagemap_entry_t *pme,
 }
 
 static int pagemap_pte_hole(unsigned long start, unsigned long end,
-				struct mm_walk *walk)
+			    struct mm_walk *walk)
 {
 	struct pagemapread *pm = walk->private;
 	unsigned long addr = start;
@@ -1763,7 +1764,8 @@ out:
 }
 
 static pagemap_entry_t pte_to_pagemap_entry(struct pagemapread *pm,
-		struct vm_area_struct *vma, unsigned long addr, pte_t pte)
+					    struct vm_area_struct *vma,
+					    unsigned long addr, pte_t pte)
 {
 	u64 frame = 0, flags = 0;
 	struct page *page = NULL;
@@ -1837,7 +1839,7 @@ static int pagemap_pmd_range(pmd_t *pmdp, unsigned long addr, unsigned long end,
 
 			if (pm->show_pfn) {
 				offset = swp_offset(entry) +
-					((addr & ~PMD_MASK) >> PAGE_SHIFT);
+					 ((addr & ~PMD_MASK) >> PAGE_SHIFT);
 				frame = swp_type(entry) |
 					(offset << MAX_SWAPFILES_SHIFT);
 			}
@@ -1920,8 +1922,7 @@ static int pagemap_hugetlb_range(pte_t *ptep, unsigned long hmask,
 
 		flags |= PM_PRESENT;
 		if (pm->show_pfn)
-			frame = pte_pfn(pte) +
-				((addr & ~hmask) >> PAGE_SHIFT);
+			frame = pte_pfn(pte) + ((addr & ~hmask) >> PAGE_SHIFT);
 	}
 
 	for (; addr != end; addr += PAGE_SIZE) {
@@ -1939,13 +1940,13 @@ static int pagemap_hugetlb_range(pte_t *ptep, unsigned long hmask,
 	return err;
 }
 #else
-#define pagemap_hugetlb_range	NULL
+#define pagemap_hugetlb_range NULL
 #endif /* HUGETLB_PAGE */
 
 static const struct mm_walk_ops pagemap_ops = {
-	.pmd_entry	= pagemap_pmd_range,
-	.pte_hole	= pagemap_pte_hole,
-	.hugetlb_entry	= pagemap_hugetlb_range,
+	.pmd_entry = pagemap_pmd_range,
+	.pte_hole = pagemap_pte_hole,
+	.hugetlb_entry = pagemap_hugetlb_range,
 };
 
 /*
@@ -1974,8 +1975,8 @@ static const struct mm_walk_ops pagemap_ops = {
  * determine which areas of memory are actually mapped and llseek to
  * skip over unmapped regions.
  */
-static ssize_t pagemap_read(struct file *file, char __user *buf,
-			    size_t count, loff_t *ppos)
+static ssize_t pagemap_read(struct file *file, char __user *buf, size_t count,
+			    loff_t *ppos)
 {
 	struct mm_struct *mm = file->private_data;
 	struct pagemapread pm;
@@ -2080,10 +2081,10 @@ static int pagemap_release(struct inode *inode, struct file *file)
 }
 
 const struct file_operations proc_pagemap_operations = {
-	.llseek		= mem_lseek, /* borrow this */
-	.read		= pagemap_read,
-	.open		= pagemap_open,
-	.release	= pagemap_release,
+	.llseek = mem_lseek, /* borrow this */
+	.read = pagemap_read,
+	.open = pagemap_open,
+	.release = pagemap_release,
 };
 #endif /* CONFIG_PROC_PAGE_MONITOR */
 
@@ -2106,7 +2107,7 @@ struct numa_maps_private {
 };
 
 static void gather_stats(struct page *page, struct numa_maps *md, int pte_dirty,
-			unsigned long nr_pages)
+			 unsigned long nr_pages)
 {
 	int count = page_mapcount(page);
 
@@ -2133,7 +2134,7 @@ static void gather_stats(struct page *page, struct numa_maps *md, int pte_dirty,
 }
 
 static struct page *can_gather_numa_stats(pte_t pte, struct vm_area_struct *vma,
-		unsigned long addr)
+					  unsigned long addr)
 {
 	struct page *page;
 	int nid;
@@ -2181,8 +2182,8 @@ static struct page *can_gather_numa_stats_pmd(pmd_t pmd,
 }
 #endif
 
-static int gather_pte_stats(pmd_t *pmd, unsigned long addr,
-		unsigned long end, struct mm_walk *walk)
+static int gather_pte_stats(pmd_t *pmd, unsigned long addr, unsigned long end,
+			    struct mm_walk *walk)
 {
 	struct numa_maps *md = walk->private;
 	struct vm_area_struct *vma = walk->vma;
@@ -2198,7 +2199,7 @@ static int gather_pte_stats(pmd_t *pmd, unsigned long addr,
 		page = can_gather_numa_stats_pmd(*pmd, vma, addr);
 		if (page)
 			gather_stats(page, md, pmd_dirty(*pmd),
-				     HPAGE_PMD_SIZE/PAGE_SIZE);
+				     HPAGE_PMD_SIZE / PAGE_SIZE);
 		spin_unlock(ptl);
 		return 0;
 	}
@@ -2220,7 +2221,8 @@ static int gather_pte_stats(pmd_t *pmd, unsigned long addr,
 }
 #ifdef CONFIG_HUGETLB_PAGE
 static int gather_hugetlb_stats(pte_t *pte, unsigned long hmask,
-		unsigned long addr, unsigned long end, struct mm_walk *walk)
+				unsigned long addr, unsigned long end,
+				struct mm_walk *walk)
 {
 	pte_t huge_pte = huge_ptep_get(pte);
 	struct numa_maps *md;
@@ -2240,7 +2242,8 @@ static int gather_hugetlb_stats(pte_t *pte, unsigned long hmask,
 
 #else
 static int gather_hugetlb_stats(pte_t *pte, unsigned long hmask,
-		unsigned long addr, unsigned long end, struct mm_walk *walk)
+				unsigned long addr, unsigned long end,
+				struct mm_walk *walk)
 {
 	return 0;
 }
@@ -2321,7 +2324,7 @@ static int show_numa_map(struct seq_file *m, void *v)
 	if (md->writeback)
 		seq_printf(m, " writeback=%lu", md->writeback);
 
-	for_each_node_state(nid, N_MEMORY)
+	for_each_node_state (nid, N_MEMORY)
 		if (md->node[nid])
 			seq_printf(m, " N%d=%lu", nid, md->node[nid]);
 
@@ -2333,23 +2336,23 @@ out:
 }
 
 static const struct seq_operations proc_pid_numa_maps_op = {
-	.start  = m_start,
-	.next   = m_next,
-	.stop   = m_stop,
-	.show   = show_numa_map,
+	.start = m_start,
+	.next = m_next,
+	.stop = m_stop,
+	.show = show_numa_map,
 };
 
 static int pid_numa_maps_open(struct inode *inode, struct file *file)
 {
 	return proc_maps_open(inode, file, &proc_pid_numa_maps_op,
-				sizeof(struct numa_maps_private));
+			      sizeof(struct numa_maps_private));
 }
 
 const struct file_operations proc_pid_numa_maps_operations = {
-	.open		= pid_numa_maps_open,
-	.read		= seq_read,
-	.llseek		= seq_lseek,
-	.release	= proc_map_release,
+	.open = pid_numa_maps_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = proc_map_release,
 };
 
 #endif /* CONFIG_NUMA */
