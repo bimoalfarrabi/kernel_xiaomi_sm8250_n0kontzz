@@ -2390,6 +2390,20 @@ int smblib_vbus_regulator_is_enabled(struct regulator_dev *rdev)
  * BATT PSY GETTERS *
  ********************/
 
+int smblib_get_prop_bypass_chrg(struct smb_charger *chg,
+				  union power_supply_propval *val)
+{
+	if ((get_client_vote(chg->chg_disable_votable, BYPASS_VOTER) == 1)) {
+         	val->intval = 1;
+      	} else if (bypass_charging) {
+          	val->intval = 2;
+      	} else {
+         	val->intval = 0;
+      	}
+
+	return 0;
+}
+
 int smblib_get_prop_input_suspend(struct smb_charger *chg,
 				  union power_supply_propval *val)
 {
