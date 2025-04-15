@@ -3174,6 +3174,47 @@ static void smblib_get_start_vbat_before_step_charge(struct smb_charger *chg)
  * BATTERY PSY SETTERS *
  ***********************/
 
+int smblib_set_prop_bypass_chrg(struct smb_charger *chg,
+				  const union power_supply_propval *val)
+{
+	int rc;
+
+	/* vote 0mA when suspended */
+	rc = vote(chg->usb_icl_votable, USER_VOTER, false, 0);
+	if (rc < 0) {
+		smblib_err(chg, "Couldn't vote to %s USB rc=%d\n",
+			(bool)val->intval ? "suspend" : "resume", rc);
+		return rc;
+	}
+
+	rc = vote(chg->dc_suspend_votable, USER_VOTER, false, 0);
+	if (rc < 0) {
+		smblib_err(chg, "Couldn't vote to %s DC rc=%d\n",
+			(bool)val->intval ? "suspend" : "resume", rc);
+		return rc;
+	}
+
+	if (val->intval == 1) {
+          	rc = vote(chg->chg_disable_votable, BYPASS_VOTER, 1, 0);
+          	bypass_charging = 0;
+      	} else if (val->intval == 2) {
+          	rc = vote(chg->chg_disable_votable, BYPASS_VOTER, 0, 0);
+          	bypass_charging = 1;
+      	} else {
+          	rc = vote(chg->chg_disable_votable, BYPASS_VOTER, 0, 0);
+          	bypass_charging = 0;
+      	}
+
+ 	if (rc < 0) {
+  		smblib_err(chg, "Couldn't vote to %d input_suspend rc=%d\n",
+  			val->intval, rc);
+  		return rc;
+  	}
+
+	power_supply_changed(chg->batt_psy);
+	return rc;
+}
+
 int smblib_set_prop_input_suspend(struct smb_charger *chg,
 				  const union power_supply_propval *val)
 {
