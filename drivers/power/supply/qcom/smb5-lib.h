@@ -1053,6 +1053,8 @@ irqreturn_t typec_or_rid_detection_change_irq_handler(int irq, void *data);
 irqreturn_t temp_change_irq_handler(int irq, void *data);
 irqreturn_t usbin_ov_irq_handler(int irq, void *data);
 irqreturn_t sdam_sts_change_irq_handler(int irq, void *data);
+int smblib_get_prop_bypass_chrg(struct smb_charger *chg,
+				union power_supply_propval *val);
 int smblib_get_prop_input_suspend(struct smb_charger *chg,
 				union power_supply_propval *val);
 int smblib_get_prop_battery_input_suspend(struct smb_charger *chg,
@@ -1080,6 +1082,8 @@ int smblib_get_prop_system_temp_level_max(struct smb_charger *chg,
 int smblib_get_prop_input_current_limited(struct smb_charger *chg,
 				union power_supply_propval *val);
 int smblib_get_prop_batt_iterm(struct smb_charger *chg,
+				union power_supply_propval *val);
+int smblib_set_prop_bypass_chrg(struct smb_charger *chg,
 				union power_supply_propval *val);
 int smblib_set_prop_input_suspend(struct smb_charger *chg,
 				const union power_supply_propval *val);
