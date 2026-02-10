@@ -11,12 +11,20 @@ on:
         description: "Changelog for the release"
         required: true
         type: string
+      CLANG_TOOLCHAIN:
+        description: "Clang Toolchain Version"
+        required: true
+        default: "neutron"
+        type: choice
+        options:
+          - neutron
+          - aosp clang 20
+          - aosp clang 21
 
 permissions:
   contents: write
 
 env:
-  CLANG_DOWNLOAD_URL: "https://github.com/Impqxr/aosp_clang_ci/releases/download/13289611/clang-13289611-linux-x86.tar.xz"
   KERNEL_TREE_URL: "https://github.com/bimoalfarrabi/kernel_xiaomi_sm8250_n0kontzz"
   ANYKERNEL_URL_MUNCH: "https://github.com/bimoalfarrabi/AKmunch"
   ANYKERNEL_BRANCH_MUNCH: "main"
@@ -25,28 +33,38 @@ jobs:
   cache_clang:
     runs-on: ubuntu-latest
     steps:
-      - name: Cache Clang
+      - name: Cache Clang Toolchain
         id: cache-clang
         uses: actions/cache@v4
         with:
-          path: clang
-          key: clang-ci
+          path: |
+            clang-neutron
+            clang-aosp-20
+            clang-aosp-21
+          key: clang-toolchain-${{ github.event.inputs.CLANG_TOOLCHAIN }}-${{ hashFiles('**/clang-version') }}
           restore-keys: |
-            clang-
+            clang-toolchain-${{ github.event.inputs.CLANG_TOOLCHAIN }}-
 
-      - name: Download and Extract Clang (if not cached)
+      - name: Download & Extract Clang (If not cached)
         if: steps.cache-clang.outputs.cache-hit != 'true'
         run: |
-          set -e
-          wget "${{ env.CLANG_DOWNLOAD_URL }}" -O clang.tar.gz
-          mkdir -p clang
-          tar -xf clang.tar.gz -C clang
-          cd clang
-          if [ -d clang-* ]; then
-            mv clang-*/* .
+          if [[ "${{ github.event.inputs.CLANG_TOOLCHAIN }}" == "aosp clang 20" ]]; then
+            wget https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/main/clang-r547379.tar.gz -O clang.tar.gz
+            mkdir -p clang-aosp-20
+            tar -xf clang.tar.gz -C clang-aosp-20
+            echo "aosp-20-r547379" > clang-version
+          elif [[ "${{ github.event.inputs.CLANG_TOOLCHAIN }}" == "aosp clang 21" ]]; then
+            wget https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/508ea7dd0d8f681904d0422e98af9613aaabf180/clang-r574158.tar.gz -O clang.tar.gz
+            mkdir -p clang-aosp-21
+            tar -xf clang.tar.gz -C clang-aosp-21
+            echo "aosp-21-r574158" > clang-version
+          else
+            wget https://github.com/Neutron-Toolchains/clang-build-catalogue/releases/download/10032024/neutron-clang-10032024.tar.zst -O clang.tar.zst
+            mkdir -p clang-neutron
+            unzstd -d clang.tar.zst
+            tar -xf clang.tar -C clang-neutron
+            echo "neutron-10032024" > clang-version
           fi
-          cd ..
-          rm clang.tar.gz
 
   build:
     needs: cache_clang
@@ -229,13 +247,26 @@ jobs:
           echo "AnyKernel URL (munch): ${{ env.ANYKERNEL_URL_MUNCH }}/tree/${{ env.ANYKERNEL_BRANCH_MUNCH }}"
           echo "::endgroup::"
 
-      - name: Restore Clang Cache
+      - name: Restore Clang Toolchain Cache
         uses: actions/cache@v4
         with:
-          path: clang
-          key: clang-ci
+          path: |
+            clang-neutron
+            clang-aosp-20
+            clang-aosp-21
+          key: clang-toolchain-${{ github.event.inputs.CLANG_TOOLCHAIN }}-${{ hashFiles('**/clang-version') }}
           restore-keys: |
-            clang-
+            clang-toolchain-${{ github.event.inputs.CLANG_TOOLCHAIN }}-
+
+      - name: Set Clang Path
+        run: |
+          if [[ "${{ github.event.inputs.CLANG_TOOLCHAIN }}" == "aosp clang 20" ]]; then
+            echo "CLANG_PATH=$(pwd)/clang-aosp-20/bin" >> $GITHUB_ENV
+          elif [[ "${{ github.event.inputs.CLANG_TOOLCHAIN }}" == "aosp clang 21" ]]; then
+            echo "CLANG_PATH=$(pwd)/clang-aosp-21/bin" >> $GITHUB_ENV
+          else
+            echo "CLANG_PATH=$(pwd)/clang-neutron/bin" >> $GITHUB_ENV
+          fi
 
       - name: Initialize workspace
         id: workspace
@@ -253,7 +284,8 @@ jobs:
           export SUBARCH=ARM64
           export KBUILD_BUILD_USER="${{ github.actor }}"
           export KBUILD_BUILD_HOST="github.com"
-          export PATH="${{ steps.workspace.outputs.tools_folder }}/clang/bin:$PATH"
+          export KBUILD_BUILD_HOST="github.com"
+          export PATH="${{ env.CLANG_PATH }}:$PATH"
 
           if [[ -n "${{ matrix.config.KERNELSU_NAME }}" && -n "${{ matrix.config.KERNELSU_SETUP_BRANCH }}" && -n "${{ matrix.config.KERNELSU_SETUP_URL }}" ]]; then
             curl -LSs "${{ matrix.config.KERNELSU_SETUP_URL }}" | bash -s ${{ matrix.config.KERNELSU_SETUP_BRANCH }}
