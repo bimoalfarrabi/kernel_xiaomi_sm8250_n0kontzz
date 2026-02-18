@@ -1068,7 +1068,7 @@ static int __set_oom_adj(struct file *file, int oom_adj, bool legacy)
 {
 	struct mm_struct *mm = NULL;
 	struct task_struct *task;
-#ifdef CONFIG_E404_SIGNATURE
+#if defined(CONFIG_E404_SIGNATURE) || defined(CONFIG_N0KZ_SIGNATURE)
 	char task_comm[TASK_COMM_LEN];
 #endif
 	int err = 0;
